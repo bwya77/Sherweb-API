@@ -1,3 +1,4 @@
+
 Function Connect-Sherweb {
     <#
     .SYNOPSIS
@@ -23,13 +24,11 @@ Function Connect-Sherweb {
         The scope of the access token. Valid values are 'service-provider' or 'distributor'.
 
     .EXAMPLE
-        PS> $SecureGatewaySubscriptionKey = ConvertTo-SecureString "your-gateway-subscription-key" -AsPlainText -Force
-        PS> $SecureClientSecret = ConvertTo-SecureString "your-client-secret" -AsPlainText -Force
-        PS> Connect-Sherweb -ClientId "your-client-id" -ClientSecret $SecureClientSecret -GatewaySubscriptionKey $SecureGatewaySubscriptionKey
+        PS> Connect-Sherweb -ClientId "your-client-id" -ClientSecret "your-client-secret" -GatewaySubscriptionKey "your-gateway-subscription-key"
         Retrieves an access token and stores authentication information in the current session.
         
     .OUTPUTS
-        None
+        PSCustomObject
 
     .LINK
         https://developers.sherweb.com/
@@ -38,9 +37,9 @@ Function Connect-Sherweb {
     .NOTES
         Author: Bradley Wyatt
         Requires: PowerShell 5.1 or later
-        Version: 1.2
+        Version: 1.3
 #>
-    [OutputType([void])]
+    [OutputType([PSCustomObject])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -49,11 +48,11 @@ Function Connect-Sherweb {
 
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [securestring]$ClientSecret,
+        [string]$ClientSecret,
 
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [securestring]$GatewaySubscriptionKey,
+        [string]$GatewaySubscriptionKey,
 
         [Parameter()]
         [ValidatePattern('^https://.*')]
@@ -70,7 +69,7 @@ Function Connect-Sherweb {
             Method      = "Post"
             Body        = @{
                 client_id     = $ClientId
-                client_secret = (Convert-SecureStringToPlainText -SecureString $ClientSecret)
+                client_secret = $ClientSecret
                 scope         = $scope
                 grant_type    = "client_credentials"
             }
@@ -95,13 +94,19 @@ Function Connect-Sherweb {
     }
 
     end {
-            $script:SherwebAccessToken = @{
-                AccessToken = $response.access_token
-                GatewaySubscriptionKey = $gatewaySubscriptionKey
-                Expiration = (Get-Date).AddSeconds($response.expires_in)
-                ClientId = $ClientId
-                ClientSecret = $ClientSecret
-                Scope = $Scope
+        $script:SherwebAccessToken = @{
+            AccessToken            = $response.access_token
+            GatewaySubscriptionKey = $gatewaySubscriptionKey
+            Expiration             = (Get-Date).AddSeconds($response.expires_in)
+            ClientId               = $ClientId
+            ClientSecret           = $ClientSecret
+            Scope                  = $Scope
+        }
+        [PSCustomObject]@{
+            Status      = "Success"
+            ExpiresAt   = $script:SherwebAccessToken.Expiration
+            Scope       = $script:SherwebAccessToken.Scope
+            AccessToken = $script:SherwebAccessToken.AccessToken
         }
     }
 }
